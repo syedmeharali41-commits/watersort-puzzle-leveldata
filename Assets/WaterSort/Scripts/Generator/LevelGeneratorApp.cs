@@ -378,14 +378,38 @@ namespace Designcoffers.WaterSort.GeneratorTool
 
             LevelBundle bundle = new LevelBundle();
             bundle.levels = new List<LevelData>(totalLevels);
+            int filledCount = 0;
             for (int i = 0; i < totalLevels; i++)
             {
                 if (slot[i] == null)
                 {
-                    failures++;
-                    Console.Error.WriteLine($"[FAILURE] Level {i + 1} was missing.");
+                    int levelNumber = i + 1;
+                    WaterSortDifficulty d = WaterSortDifficulty.ForLevel(levelNumber);
+                    bool requireExact = d.Capacity < 6;
+                    int attempts, budget;
+                    GetComputeBudget(d, out attempts, out budget);
+                    LevelData filled = null;
+                    try { filled = GenerateWithBudget(levelNumber, d.RequiredMinimumMoves, requireExact, Math.Max(attempts * 2, 128), budget); }
+                    catch { filled = null; }
+
+                    if (filled != null)
+                    {
+                        slot[i] = filled;
+                        bundle.levels.Add(filled);
+                        filledCount++;
+                    }
+                    else
+                    {
+                        failures++;
+                        Console.Error.WriteLine($"[FAILURE] Level {i + 1} was missing.");
+                    }
                 }
                 else bundle.levels.Add(slot[i]);
+            }
+
+            if (filledCount > 0)
+            {
+                Console.WriteLine($"[MERGE AUTO-FILL] Successfully generated and filled {filledCount} missing levels during merge phase.");
             }
 
             string json = SimpleJsonSerializer.SerializeBundle(bundle);
