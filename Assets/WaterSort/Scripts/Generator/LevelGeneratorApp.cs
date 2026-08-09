@@ -140,6 +140,25 @@ namespace Designcoffers.WaterSort.GeneratorTool
                 }
             });
 
+            // ---- Chunk Mode Save & Exit --------------------------------------------------
+            bool isChunkMode = (startLevel > 1 || endLevel < totalLevels);
+            if (isChunkMode)
+            {
+                LevelBundle chunkBundle = new LevelBundle();
+                chunkBundle.levels = new List<LevelData>();
+                for (int i = startLevel; i <= endLevel; i++)
+                {
+                    if (slot[i - 1] != null) chunkBundle.levels.Add(slot[i - 1]);
+                }
+                string chunkJson = SimpleJsonSerializer.SerializeBundle(chunkBundle);
+                if (string.IsNullOrEmpty(outputPath)) outputPath = $"chunk_{startLevel}_{endLevel}.json";
+                string chunkOutDir = Path.GetDirectoryName(outputPath);
+                if (!string.IsNullOrEmpty(chunkOutDir)) Directory.CreateDirectory(chunkOutDir);
+                File.WriteAllText(outputPath, chunkJson, new UTF8Encoding(true));
+                Console.WriteLine($"[CHUNK DONE] Successfully saved {chunkBundle.levels.Count} chunk levels to: {outputPath}");
+                return;
+            }
+
             // ---- Phase B: 15% relative-growth checkpoint chain (sequential fix-up) -------
             Console.WriteLine();
             Console.WriteLine("=== 15% RELATIVE-GROWTH CHECKPOINT VALIDATION ===");
