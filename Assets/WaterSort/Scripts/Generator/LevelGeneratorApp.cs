@@ -109,9 +109,8 @@ namespace Designcoffers.WaterSort.GeneratorTool
                     WaterSortDifficulty d = WaterSortDifficulty.ForLevel(L);
                     int attempts, budget;
                     GetComputeBudget(d, out attempts, out budget);
-                    // Exact-first everywhere except huge capacity-7/8 fill levels, where the
-                    // floor-proof BFS is the primary validator (far cheaper).
-                    bool requireExact = d.Capacity < 7;
+                    // Exact-first for C=4,5; BFS floor-proof for C>=6 (100x faster on cloud runners)
+                    bool requireExact = d.Capacity < 6;
                     LevelData level = GenerateWithBudget(L, d.RequiredMinimumMoves, requireExact, attempts, budget);
                     slot[L - 1] = level;
 
@@ -434,11 +433,11 @@ namespace Designcoffers.WaterSort.GeneratorTool
             // solvable deep boards look unreachable and churns regeneration forever.
             switch (d.Capacity)
             {
-                case 4: attempts = 48; maxSolverStates = 1500000; break;
-                case 5: attempts = 40; maxSolverStates = 2000000; break;
-                case 6: attempts = 32; maxSolverStates = 2500000; break;
-                case 7: attempts = 28; maxSolverStates = 2000000; break;
-                default: attempts = 24; maxSolverStates = 2500000; break;
+                case 4: attempts = 48; maxSolverStates = 500000; break;
+                case 5: attempts = 40; maxSolverStates = 500000; break;
+                case 6: attempts = 24; maxSolverStates = 300000; break;
+                case 7: attempts = 20; maxSolverStates = 300000; break;
+                default: attempts = 20; maxSolverStates = 300000; break;
             }
         }
 

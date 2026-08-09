@@ -185,16 +185,17 @@ namespace Designcoffers.WaterSort.Generator
         private static bool TryValidateCandidateProofFirst(LevelData candidate, int requiredMoves, int maxSolverStates, out string failureReason)
         {
             int proofStates = 0;
-            bool goalWithinFloorMinusOne = BfsReachesGoalIn(candidate, requiredMoves - 1, maxSolverStates, out proofStates);
+            int capProofStates = Math.Min(20000, maxSolverStates);
+            bool goalWithinFloorMinusOne = BfsReachesGoalIn(candidate, requiredMoves - 1, capProofStates, out proofStates);
             candidate.solverStatesExplored = proofStates;
             if (goalWithinFloorMinusOne)
             {
                 failureReason = string.Format("BFS found a solution within {0} moves (below floor {1}).", requiredMoves - 1, requiredMoves);
                 return false;
             }
-            if (proofStates >= maxSolverStates)
+            if (proofStates >= capProofStates)
             {
-                failureReason = string.Format("Floor proof BFS exhausted {0} states without concluding.", maxSolverStates);
+                failureReason = string.Format("Floor proof BFS exhausted {0} states without concluding.", capProofStates);
                 return false;
             }
 
@@ -202,14 +203,15 @@ namespace Designcoffers.WaterSort.Generator
             candidate.minMoves = requiredMoves;
             candidate.validationExact = false;
 
-            // Optional exact value for the 15% chain, but only when cheap: the BFS
-            // already certified the floor, so the exact A* is time-boxed to a quarter
-            // of the main budget (it almost never finishes on capacity-7/8 boards).
-            WaterSortSolveResult solved;
-            if (WaterSortSolver.TrySolveOptimal(candidate, Math.Max(50000, maxSolverStates / 4), out solved))
+            // Optional exact value for the 15% chain, but only when cheap (C <= 5).
+            if (candidate.capacity <= 5)
             {
-                candidate.minMoves = solved.OptimalMoveCount;
-                candidate.validationExact = true;
+                WaterSortSolveResult solved;
+                if (WaterSortSolver.TrySolveOptimal(candidate, 25000, out solved))
+                {
+                    candidate.minMoves = solved.OptimalMoveCount;
+                    candidate.validationExact = true;
+                }
             }
 
             failureReason = string.Empty;
