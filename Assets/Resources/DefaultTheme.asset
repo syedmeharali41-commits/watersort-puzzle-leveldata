@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c50032df6adbdde46ad5844cb54171e1, type: 3}
+  m_Name: DefaultTheme
+  m_EditorClassIdentifier: 
+  backgroundColor: {r: 0.039, g: 0.039, b: 0.039, a: 1}
+  accentColor: {r: 0.976, g: 0.451, b: 0.086, a: 1}
+  surfaceColor: {r: 0.094, g: 0.094, b: 0.106, a: 1}
+  surfaceBorderColor: {r: 0.153, g: 0.153, b: 0.165, a: 1}
+  textPrimaryColor: {r: 1, g: 1, b: 1, a: 1}
+  textSecondaryColor: {r: 0.631, g: 0.631, b: 0.667, a: 1}
+  fontName: Outfit
+  font: {fileID: 12800000, guid: bb666686c52187d4482f91a0c551b275, type: 3}
+  buttonCornerRadius: 16
+  cardCornerRadius: 20
+  defaultAnimDuration: 0.25
+  pourAnimDuration: 0.35
+  scalePressAmount: 0.94

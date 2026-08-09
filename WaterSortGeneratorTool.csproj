@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OptimizationPreference>Speed</OptimizationPreference>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Assets/WaterSort/Scripts/Data/LevelData.cs" />
+    <Compile Include="Assets/WaterSort/Scripts/Generator/WaterSortDifficulty.cs" />
+    <Compile Include="Assets/WaterSort/Scripts/Generator/WaterSortGeneratorEngine.cs" />
+    <Compile Include="Assets/WaterSort/Scripts/Generator/WaterSortSolver.cs" />
+    <Compile Include="Assets/WaterSort/Scripts/Generator/LevelGeneratorApp.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>Newtonsoft.Json.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

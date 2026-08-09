@@ -1,0 +1,29 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Aa]sset[Ss]tore[Tt]ools*
+
+# Standalone build outputs & temp files
+*.exe
+*.dll
+*.pdb
+*.partial.json
+*.log
+generation_log.txt
+test_chunks/
+all_chunks/
+chunks/
+output/
+graphify-out/
+.freebuff/
+
+# VS Code & IDE
+.vscode/
+.idea/
+*.csproj.user

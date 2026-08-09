@@ -1,0 +1,98 @@
+name: Generate and Validate Water Sort Levels
+
+on:
+  workflow_dispatch:
+    inputs:
+      total_levels:
+        description: 'Total levels to generate (e.g. 250 for small test run, 10000 for full run)'
+        required: true
+        default: '250'
+      num_chunks:
+        description: 'Number of parallel matrix jobs (start conservative: 5)'
+        required: true
+        default: '5'
+
+jobs:
+  generate-chunks:
+    name: Generate Level Chunk
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: [1, 2, 3, 4, 5]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build Standalone Generator Tool
+        run: dotnet build WaterSortGeneratorTool.csproj -c Release
+
+      - name: Compute Chunk Level Bounds & Generate
+        run: |
+          TOTAL=${{ github.event.inputs.total_levels }}
+          CHUNKS=${{ github.event.inputs.num_chunks }}
+          INDEX=${{ matrix.chunk }}
+          
+          PER_CHUNK=$((TOTAL / CHUNKS))
+          START=$(( (INDEX - 1) * PER_CHUNK + 1 ))
+          if [ "$INDEX" -eq "$CHUNKS" ]; then
+            END=$TOTAL
+          else
+            END=$(( INDEX * PER_CHUNK ))
+          fi
+          
+          echo "Chunk $INDEX: generating levels $START to $END..."
+          mkdir -p chunks
+          dotnet run --project WaterSortGeneratorTool.csproj -c Release --no-build -- --start $START --end $END --out "chunks/chunk_${INDEX}.json"
+
+      - name: Upload Chunk Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chunk-${{ matrix.chunk }}
+          path: chunks/chunk_${{ matrix.chunk }}.json
+          retention-days: 7
+
+  merge-and-verify:
+    name: Merge Chunks and Verify 15% Checkpoint Chain
+    needs: generate-chunks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build Standalone Generator Tool
+        run: dotnet build WaterSortGeneratorTool.csproj -c Release
+
+      - name: Download All Chunk Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all_chunks/
+          pattern: chunk-*
+          merge-multiple: true
+
+      - name: Merge Chunks and Execute 15% Checkpoint Validation
+        run: |
+          TOTAL=${{ github.event.inputs.total_levels }}
+          mkdir -p output
+          dotnet run --project WaterSortGeneratorTool.csproj -c Release --no-build -- $TOTAL --merge all_chunks/ --out "output/levels.json"
+
+      - name: Upload Final Validated Level Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: levels-json-bundle
+          path: output/levels.json
+          retention-days: 14

@@ -1,0 +1,208 @@
+================================================================================
+ WATER SORT PUZZLE — 10,000 LEVEL HARD REDESIGN
+ COMPLETE OPERATION MANUAL (built 7-Aug-2026)
+================================================================================
+
+PROJECT ROOT:  C:\Users\DesignNexis\Desktop\Games
+UNITY:         2022.3.20f1  (installed at C:\Program Files\Unity\Hub\Editor\2022.3.20f1)
+NOTE:          All terminal commands below run in Git Bash (POSIX syntax).
+
+--------------------------------------------------------------------------------
+1. WHAT WAS BUILT (10k HARD redesign — all code DONE and verified)
+--------------------------------------------------------------------------------
+- New difficulty profile: Assets/WaterSort/Scripts/Generator/WaterSortDifficulty.cs
+    K = 3 flat for L1-50, then 3 + floor((L-50)/130), cap 22  (~L2520+)
+    N = K+3 (L1-500), K+2 (L501+)          [spec's K+1/K ramps are unplayable: K+1
+                                            deadlocks ~100% at K>=9, K has zero empty
+                                            tubes = no legal first move]
+    C = 4 (1-2000), 5 (2001-4500), 6 (4501-7000), 7 (7001-9000), 8 (9001-10000)
+    S = 20 + L*4, cap 35000
+    Floor = min(8 + L/10, achievable-cap)   [cap ~70% of measured achievable depth,
+                                            so floors are always solver-reachable]
+    6 bands: Tutorial 1-50 / Normal 51-500 / Hard 501-2500 / Very Hard 2501-5000 /
+            Expert 5001-7500 / World-Class 7501-10000
+
+- Generator engine:  Assets/WaterSort/Scripts/Generator/WaterSortGeneratorEngine.cs
+    Seeded (level*7919+salt), deterministic, non-repeating.
+    Scramble = S random single-segment transfers (PRD's "reverse-legal-pour" is
+    mathematically impossible: legal pours can never create mixed tubes from solved).
+    Validation: exact A* first; if A* exceeds budget, a bounded forward BFS to
+    depth (floor-1) proves the floor (certified, minMoves=floor, validationExact=false).
+    Locked-tube lever: Expert/World-Class levels (L>=5001) lock 1-2 already-pure
+    tubes for the first 3-4 moves (solver-safe selection, +1 unlocked move required).
+
+- Solver:  Assets/WaterSort/Scripts/Generator/WaterSortSolver.cs
+    Exact A* with admissible heuristic + canonical state keys + optional lock-aware
+    solve (TrySolveOptimalLocked) for verifying locked levels.
+
+- Level data:  Assets/WaterSort/Scripts/Data/LevelData.cs
+    Added: validationExact, lockedTubes, lockDuration (serialized to JSON).
+
+- Generator tool:  Assets/WaterSort/Scripts/Generator/LevelGeneratorApp.cs
+    Standalone exe (GeneratorTool.exe). 10,000 levels, 15%-per-250-checkpoint chain,
+    escalation, partial saves every 250 levels, --resume support.
+
+- Runtime (gameplay):  Assets/WaterSort/Scripts/Logic/WaterSortGameManager.cs
+    (lock enforcement, auto-release if deadlocked), Visuals/TubeView.cs (orange lock
+    badge with countdown), UI/WaterSortUIManager.cs (6 tier names, lock refresh).
+
+- Tests:  Assets/WaterSort/Scripts/Testing/FullSuiteTestRunner.cs (10k checks,
+    checkpoints 1/250/1000/2500, locked-lever test) and SelfTestRunner.cs
+    (checkpoints 1/1000/2500).
+
+- Tools on disk (project root): GeneratorTool.exe, SelfTest.exe, FullSuiteTest.exe,
+  DebugSampler.exe (lock verifier), build_tools.sh (compiler script), monitor.py.
+
+--------------------------------------------------------------------------------
+2. CURRENT STATUS (as of stopping)
+--------------------------------------------------------------------------------
+- Generation RUNNING was stopped at ~1600/10000 levels, 0 failures.
+- levels.partial.json contains 1505 validated levels (resume point).
+- Checkpoint chain verified so far (all above the 15% rule):
+      L    1  K=3  N=6  C=4  min=  8  floor= 8
+      L  250  K=4  N=7  C=4  min= 12  growth=+50%  PASS
+      L  500  K=6  N=9  C=4  min= 16  growth=+33%  PASS
+      L  750  K=8  N=10 C=4  min= 26  growth=+62%  PASS
+      L 1000  K=10 N=12 C=4  min= 31  growth=+19%  PASS
+      L 1250  K=12 N=14 C=4  min= 40  growth=+29%  PASS
+- ETA for full 10k: ~1.5-2.5 days continuous compute on this 4-core machine
+  (C=5/6/7/8 blocks are the expensive part; every level is solver-verified).
+
+--------------------------------------------------------------------------------
+3. BUILD THE TOOLS (only needed after changing source)
+--------------------------------------------------------------------------------
+Run in Git Bash from the project root:
+
+    bash build_tools.sh all
+
+This compiles GeneratorTool.exe, SelfTest.exe, FullSuiteTest.exe, DebugSampler.exe
+using Unity's bundled Mono csc (handles the compiler + paths automatically).
+
+If you edit source later, just run the same command again.
+
+--------------------------------------------------------------------------------
+4. GENERATE THE 10,000 LEVELS (the main job)
+--------------------------------------------------------------------------------
+Fresh start (from scratch):
+
+    cd /c/Users/DesignNexis/Desktop/Games
+    ./GeneratorTool.exe 10000 --parallel 4
+
+RESUME from partial (levels.partial.json exists) — recommended:
+
+    ./GeneratorTool.exe 10000 --parallel 4 --resume
+
+IMPORTANT:
+- Use --parallel 4 (this machine has only 4 cores; 8 oversubscribes and is slower).
+- Output: Assets/Resources/levels.json (10000 levels) written at the END.
+- Progress: generation_log.txt (redirect with `> generation_log.txt 2>&1`) and
+  levels.partial.json (auto-saved every 250 levels).
+- You can stop any time (Ctrl+C or taskkill) and later `--resume`.
+- DO NOT touch Assets/Resources/levels.json — it still holds the old 1000-level
+  bundle until the new run finishes and overwrites it. If you want to keep it:
+      copy Assets/Resources/levels.json Assets/Resources/levels_1000_backup.json
+
+EXAMPLE full command:
+
+    cd /c/Users/DesignNexis/Desktop/Games && nohup ./GeneratorTool.exe 10000 --parallel 4 --resume > generation_log.txt 2>&1 &
+    # check progress:
+    python monitor.py
+    tail -5 generation_log.txt
+
+--------------------------------------------------------------------------------
+5. MONITOR PROGRESS
+--------------------------------------------------------------------------------
+    python monitor.py
+Shows: levels done, rate, checkpoint chain with growth% and validationExact flag.
+
+Checkpoint table (full, printed at the end of the run):
+    grep Checkpoint generation_log.txt
+
+--------------------------------------------------------------------------------
+6. VERIFY THE BUNDLE (after generation completes)
+--------------------------------------------------------------------------------
+    cd /c/Users/DesignNexis/Desktop/Games
+    ./FullSuiteTest.exe        -> 10,000 levels: structure, colors, floors, Newtonsoft
+                                  deserialization, solver play-through of levels
+                                  1/250/1000/2500, locked-tube lever checks
+    ./SelfTest.exe             -> generates + solves levels 1/1000/2500
+
+NOTE: if a tool crashes with a MissingMethodException, run it through the mono
+runtime instead:
+    "/c/Program Files/Unity/Hub/Editor/2022.3.20f1/Editor/Data/MonoBleedingEdge/bin/mono.exe" FullSuiteTest.exe
+
+Checkpoint stats via python:
+    python -c "
+import json
+with open('Assets/Resources/levels.json', encoding='utf-8-sig') as f: d=json.load(f)
+by={l['levelNumber']:l for l in d['levels']}
+prev=None
+for L in sorted(by):
+    if L%250==0 or L==1:
+        lv=by[L]
+        g=(lv['minMoves']-prev)*100.0/prev if prev else 0
+        print(f'L{L:5} K={lv[\"colorCount\"]:2} N={lv[\"tubeCount\"]:2} C={lv[\"capacity\"]} min={lv[\"minMoves\"]:3} floor={lv[\"requiredMinMoves\"]:3} growth={g:5.0f}% exact={lv.get(\"validationExact\")}')
+        prev=lv['minMoves']
+"
+
+--------------------------------------------------------------------------------
+7. LOCKED-TUBE LEVER VERIFICATION (after bundle has Expert/World-Class levels)
+--------------------------------------------------------------------------------
+    "/c/Program Files/Unity/Hub/Editor/2022.3.20f1/Editor/Data/MonoBleedingEdge/bin/mono.exe" DebugSampler.exe
+Solves 3 representative locked levels (C=6/7/8) WITH the lock constraint active
+and confirms they stay solvable and harder than their floor.
+
+--------------------------------------------------------------------------------
+8. UNITY SIDE (scene / gameplay)
+--------------------------------------------------------------------------------
+- Open the project in Unity 2022.3.20f1 and press Play. The scene is fully wired.
+- The runtime validation gate in WaterSortUIManager reads requiredMinMoves from
+  the bundle and refuses unvalidated levels.
+- If the scene is ever empty: Unity menu  Designcoffers > Auto-Setup Game Scene
+  (editor script: Assets/WaterSort/Editor/AutoSetupScene.cs).
+
+--------------------------------------------------------------------------------
+9. KNOWN DEVIATIONS FROM THE REDESIGN SPEC (documented honestly)
+--------------------------------------------------------------------------------
+1. N ramp capped at K+2 (spec: K+1 at 1501-3000, K at 3001+).
+   Reason: measured. K+1 boards are ~0% solvable for K>=9 (only C empty cells, color
+   locks cannot be broken); N=K has zero empty tubes = no legal first move at all.
+2. Literal 15%-per-250 checkpoint growth cannot hold forever.
+   Reason: 40 checkpoints x 15% = ~268x total growth, but the puzzle's reachable
+   state graph caps achievable optimal length (~10 at K=3, ~65 at K=16/C=5, ~115 at
+   K=22/C=6, maybe ~150-250 at C=8). The chain is enforced where physics allows and
+   flagged with [WARN] where the physical cap is hit (expected from roughly L2500+).
+3. C=8 exact optimal solves can exceed millions of states (2+ min each). The engine
+   uses a bounded BFS floor-proof fallback: the level is certified as meeting its
+   floor (validationExact=false) even when the exact optimum can't be computed in
+   budget. Every emitted level is still solver-verified against its floor.
+4. Extra levers: Locked tubes are implemented (data + runtime + solver). Decoy
+   near-matches and 3-star move-optimality are NOT implemented: they are cosmetic /
+   rating features that do not change solver-verified min-moves, so they cannot
+   satisfy a solver-verified growth threshold (flagged per spec "implement whichever
+   is simplest first").
+5. Speed option: to finish faster, cap K<=18 and C<=6 in WaterSortDifficulty.cs
+   (two constants) — estimated ~12-18 hours for the full run, at the cost of the
+   hardest top-end band.
+
+--------------------------------------------------------------------------------
+10. KEY FILES MAP
+--------------------------------------------------------------------------------
+Assets/WaterSort/Scripts/Generator/WaterSortDifficulty.cs      <- params (edit K/C caps here)
+Assets/WaterSort/Scripts/Generator/WaterSortGeneratorEngine.cs  <- generation + validation
+Assets/WaterSort/Scripts/Generator/WaterSortSolver.cs           <- exact A* + lock-aware solve
+Assets/WaterSort/Scripts/Generator/LevelGeneratorApp.cs         <- 10k tool (chain + resume)
+Assets/WaterSort/Scripts/Data/LevelData.cs                      <- level schema
+Assets/WaterSort/Scripts/Logic/WaterSortGameManager.cs          <- runtime pour + locks
+Assets/WaterSort/Scripts/Visuals/TubeView.cs                    <- tube visuals + lock badge
+Assets/WaterSort/Scripts/UI/WaterSortUIManager.cs               <- UI + tier names + gate
+Assets/WaterSort/Scripts/Testing/FullSuiteTestRunner.cs         <- 10k test suite
+Assets/WaterSort/Scripts/Testing/SelfTestRunner.cs              <- self tests
+Assets/Resources/levels.json                                   <- final bundled levels (10000)
+levels.partial.json                                            <- resume point (1505 levels)
+generation_log.txt                                             <- generation progress log
+build_tools.sh                                                 <- rebuild script
+monitor.py                                                     <- progress monitor
+================================================================================
+END OF MANUAL
+================================================================================
