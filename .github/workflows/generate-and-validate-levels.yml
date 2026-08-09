@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       total_levels:
-        description: 'Total levels to generate (e.g. 250 for small test run, 10000 for full run)'
+        description: 'Total levels to generate (e.g. 10000)'
         required: true
-        default: '250'
+        default: '10000'
       num_chunks:
-        description: 'Number of parallel matrix jobs (start conservative: 5)'
+        description: 'Number of parallel matrix jobs (20 for fast 500-level chunks)'
         required: true
-        default: '5'
+        default: '20'
 
 jobs:
   generate-chunks:
@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        chunk: [1, 2, 3, 4, 5]
+        chunk: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
     steps:
       - name: Checkout Repository
